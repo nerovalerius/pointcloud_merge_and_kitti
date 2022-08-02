@@ -44,7 +44,6 @@ endif()
 
 ament_package()
 add_executable(merge_and_kitti src/merge_and_kitti.cpp)
-
 ament_target_dependencies(merge_and_kitti rclcpp std_msgs PCL pcl_conversions pcl_ros pcl_msgs sensor_msgs tf2 tf2_ros tf2_msgs tf2_sensor_msgs geometry_msgs tf2_geometry_msgs tf2_eigen)
 
 install(TARGETS

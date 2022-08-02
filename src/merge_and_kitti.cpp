@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <pcl/point_cloud.h>	
 #include <pcl/point_types.h>
@@ -31,7 +30,6 @@
 #include <Eigen/Geometry>
 
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#include <string>
 #include <pcl/common/transforms.h>
 
 using std::placeholders::_1;
