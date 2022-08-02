@@ -79,11 +79,12 @@ class PointCloud2Subscriber : public rclcpp::Node
         // transform the point cloud into livox_frame
         //tf2::doTransform(temp_cloud_1, trans_temp_cloud_1, transformStamped);
         pcl::transformPointCloud(temp_cloud_1, trans_temp_cloud_1, tf2::transformToEigen(transformStamped).matrix(), true);
-
-        // fuse pointclouds and set init timestamp
-        this->full_cloud += trans_temp_cloud_1;
-        this->clouds_timestamp = msg->header.stamp.sec;
-        this->clouds_received[0] = 1; 
+        
+        // check
+        if (this->clouds_received[0] == 0){
+            this->full_cloud += trans_temp_cloud_1;
+            this->clouds_received[0] = 1; 
+        }
     }
 
 
@@ -97,13 +98,11 @@ class PointCloud2Subscriber : public rclcpp::Node
         // transform the point cloud into livox_frame
         //tf2::doTransform(temp_cloud_2, trans_temp_cloud_2, transformStamped);
         pcl::transformPointCloud(temp_cloud_2, trans_temp_cloud_2, tf2::transformToEigen(transformStamped).matrix(), true);
-       
-        // fuse pointclouds if timestamp fits
-        if (msg->header.stamp.sec == this->clouds_timestamp && this->clouds_received[1] == 0){
+        
+        // check
+        if (this->clouds_received[1] == 0){
             this->full_cloud += trans_temp_cloud_2;
             this->clouds_received[1] = 1; 
-        } else {
-            std::cerr << "cloud2 time error" << std::endl;
         }
     }
 
@@ -119,12 +118,10 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_3, trans_temp_cloud_3, transformStamped);
         pcl::transformPointCloud(temp_cloud_3, trans_temp_cloud_3, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // fuse pointclouds if timestamp fits
-        if (msg->header.stamp.sec == this->clouds_timestamp && this->clouds_received[2] == 0){
+        // check
+        if (this->clouds_received[2] == 0){
             this->full_cloud += trans_temp_cloud_3;
             this->clouds_received[2] = 1; 
-        } else {
-            std::cerr << "cloud3 time error" << std::endl;
         }
     }
 
@@ -140,12 +137,10 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_4, trans_temp_cloud_4, transformStamped);
         pcl::transformPointCloud(temp_cloud_4, trans_temp_cloud_4, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // fuse pointclouds if timestamp fits
-        if (msg->header.stamp.sec == this->clouds_timestamp && this->clouds_received[3] == 0){
+        // check
+        if (this->clouds_received[3] == 0){
             this->full_cloud += trans_temp_cloud_4;
             this->clouds_received[3] = 1; 
-        } else {
-            std::cerr << "cloud4 time error" << std::endl;
         }
     }
 
@@ -161,12 +156,10 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_5, trans_temp_cloud_5, transformStamped);
         pcl::transformPointCloud(temp_cloud_5, trans_temp_cloud_5, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // fuse pointclouds if timestamp fits
-        if (msg->header.stamp.sec == this->clouds_timestamp && this->clouds_received[4] == 0){
+        // check
+        if (this->clouds_received[4] == 0){
             this->full_cloud += trans_temp_cloud_5;
             this->clouds_received[4] = 1; 
-        } else {
-            std::cerr << "cloud5 time error" << std::endl;
         }
     }
 
