@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <queue>
 
 #include "rclcpp/rclcpp.hpp"
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -49,7 +50,7 @@ class PointCloud2Subscriber : public rclcpp::Node
         options.callback_group = pointcloud_callback_group;
 
         timer_ = create_wall_timer(
-        10ns, std::bind(&PointCloud2Subscriber::timer_callback, this));
+        10ms, std::bind(&PointCloud2Subscriber::timer_callback, this));
 
         sub1_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/livox/lidar_1HDDGBM00101081",
                             10, std::bind(&PointCloud2Subscriber::cloud1_callback, this, _1));
@@ -64,6 +65,11 @@ class PointCloud2Subscriber : public rclcpp::Node
 
         tfBuffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tfListener = std::make_shared<tf2_ros::TransformListener>(*tfBuffer);
+
+        // Store full point cloud id and separate timestamps of each pointcloud for deeper analysis
+        cloud_csv.open ("full_clouds.csv");
+        cloud_csv << "full cloud id; time cloud_1; time cloud_2; time cloud_3; time cloud_4; time cloud_5;";
+
     }
 
   private:
@@ -78,11 +84,9 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_1, trans_temp_cloud_1, transformStamped);
         pcl::transformPointCloud(temp_cloud_1, trans_temp_cloud_1, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // check
-        if (this->clouds_received[0] == 0){
-            this->full_cloud += trans_temp_cloud_1;
-            this->clouds_received[0] = 1; 
-        }
+        // add clouds in fifo queue
+        clouds_1.push(std::make_tuple(trans_temp_cloud_1, msg->header.stamp.sec));
+
     }
 
 
@@ -97,11 +101,8 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_2, trans_temp_cloud_2, transformStamped);
         pcl::transformPointCloud(temp_cloud_2, trans_temp_cloud_2, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // check
-        if (this->clouds_received[1] == 0){
-            this->full_cloud += trans_temp_cloud_2;
-            this->clouds_received[1] = 1; 
-        }
+        // add clouds in fifo queue
+        clouds_2.push(std::make_tuple(trans_temp_cloud_2, msg->header.stamp.sec));
     }
 
 
@@ -116,11 +117,8 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_3, trans_temp_cloud_3, transformStamped);
         pcl::transformPointCloud(temp_cloud_3, trans_temp_cloud_3, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // check
-        if (this->clouds_received[2] == 0){
-            this->full_cloud += trans_temp_cloud_3;
-            this->clouds_received[2] = 1; 
-        }
+        // add clouds in fifo queue
+        clouds_3.push(std::make_tuple(trans_temp_cloud_3, msg->header.stamp.sec));
     }
 
 
@@ -135,11 +133,8 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_4, trans_temp_cloud_4, transformStamped);
         pcl::transformPointCloud(temp_cloud_4, trans_temp_cloud_4, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // check
-        if (this->clouds_received[3] == 0){
-            this->full_cloud += trans_temp_cloud_4;
-            this->clouds_received[3] = 1; 
-        }
+        // add clouds in fifo queue
+        clouds_4.push(std::make_tuple(trans_temp_cloud_4, msg->header.stamp.sec));
     }
 
 
@@ -154,18 +149,36 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_5, trans_temp_cloud_5, transformStamped);
         pcl::transformPointCloud(temp_cloud_5, trans_temp_cloud_5, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // check
-        if (this->clouds_received[4] == 0){
-            this->full_cloud += trans_temp_cloud_5;
-            this->clouds_received[4] = 1; 
-        }
+        // add clouds in fifo queue
+        clouds_5.push(std::make_tuple(trans_temp_cloud_5, msg->header.stamp.sec));
     }
 
 
     void timer_callback()  {
-        
-        // check if 5 pointclouds are read in, thus, is the vector {1,1,1,1,1}?
-        if (std::accumulate(this->clouds_received.begin(), this->clouds_received.end(), 0) == 5){
+
+        // check if all the pointclouds have at least 1 cloud in their FIFO queue, thus we can merge all the newest clouds into one
+        if (clouds_1.size() != 0 && clouds_2.size() != 0 && clouds_3.size() != 0 && clouds_4.size() != 0 && clouds_5.size() != 0 && allow_pointcloud_merge == true){
+
+            // merge newest clouds from all streams
+            full_cloud += std::get<0>(clouds_1.front());
+            full_cloud += std::get<0>(clouds_2.front());
+            full_cloud += std::get<0>(clouds_3.front());
+            full_cloud += std::get<0>(clouds_4.front());
+            full_cloud += std::get<0>(clouds_5.front());
+            this->stored_full_clouds++;
+
+            // store timestamps of clouds
+            // CSV - full cloud id; time cloud_1; time cloud_2; time cloud_3; time cloud_4; time cloud_5;
+            cloud_csv << this->stored_full_clouds             << ";" << std::get<1>(clouds_1.front()) << ";" << std::get<1>(clouds_2.front())\
+                      << ";" << std::get<1>(clouds_3.front()) << ";" << std::get<1>(clouds_4.front()) << ";" << std::get<1>(clouds_5.front()) << ";\n";
+
+            // remove clouds from FIFO Queue
+            clouds_1.pop();
+            clouds_2.pop();
+            clouds_3.pop();
+            clouds_4.pop();
+            clouds_5.pop();
+
             // Save Pointcloud to file
             std::stringstream ss;
             ss << "./full_cloud_" << this->stored_full_clouds << ".pcd";
@@ -173,27 +186,34 @@ class PointCloud2Subscriber : public rclcpp::Node
             pcl::io::savePCDFileASCII(full_cloud_name, full_cloud);
             
             std::cout << full_cloud_name << " saved" << std::endl;
-            this->clouds_timestamp = 0;
 
-            // reset vector with point cloud status, thus {0,0,0,0,0}
-            std::fill(this->clouds_received.begin(), this->clouds_received.end(), 0);
-            this->stored_full_clouds++;
-
-            // clear cloud
+            // clear cloud object
             this->full_cloud.clear();
+
+            // close file if no pointclouds arrive anymore - threshold 10 seconds
+            this->time_since_full_pointcloud = 0;
+
+        } else {    // if no pointcloud arrives after a threshold of 1000 * 10 ms = 10 seconds, the file pointer is closed
+            this->time_since_full_pointcloud++;
+            if (this->time_since_full_pointcloud >= 1000){
+                cloud_csv.close();
+                std::cout << "no more pointclouds arrived since 10 seconds. Program can be closed with CTRL+C" << std::endl;
+                allow_pointcloud_merge = false;
+            }
         }
 
     }
 
 
-    uint16_t clouds_timestamp = 0, stored_full_clouds = 0;
-    std::vector<int> clouds_received{0,0,0,0,0};
+    size_t stored_full_clouds = 0, time_since_full_pointcloud = 0;
+    std::queue<std::tuple<pcl::PointCloud<pcl::PointXYZI>, int32_t>> clouds_1, clouds_2, clouds_3, clouds_4, clouds_5;
     std::unique_ptr<tf2_ros::Buffer> tfBuffer;
     std::shared_ptr<tf2_ros::TransformListener> tfListener{nullptr};
     geometry_msgs::msg::TransformStamped transformStamped;
     rclcpp::CallbackGroup::SharedPtr pointcloud_callback_group;
     rclcpp::SubscriptionOptions options;
-    bool full_cloud_completed;
+    bool allow_pointcloud_merge = false;
+    std::ofstream cloud_csv;
 
     pcl::PointCloud<pcl::PointXYZI> full_cloud;
     rclcpp::TimerBase::SharedPtr timer_;
