@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <iomanip>
 
 #include "rclcpp/rclcpp.hpp"
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -46,29 +47,29 @@ class PointCloud2Subscriber : public rclcpp::Node
     {
 
         // create callback group for parallel execution of callbacks by ROS Executors
-        pointcloud_callback_group = create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+        pointcloud_callback_group = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive); // alternative: threaded -> Reentrant
         options.callback_group = pointcloud_callback_group;
 
         timer_ = create_wall_timer(
-        10ms, std::bind(&PointCloud2Subscriber::timer_callback, this));
+        1ms, std::bind(&PointCloud2Subscriber::timer_callback, this));
 
         sub1_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/livox/lidar_1HDDGBM00101081",
-                            10, std::bind(&PointCloud2Subscriber::cloud1_callback, this, _1));
+                            10, std::bind(&PointCloud2Subscriber::cloud1_callback, this, _1), options);
         sub2_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/livox/lidar_1HDDH1200103541",
-                            10, std::bind(&PointCloud2Subscriber::cloud2_callback, this, _1));
+                            10, std::bind(&PointCloud2Subscriber::cloud2_callback, this, _1), options);
         sub3_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/livox/lidar_3WEDH7600108991",
-                            10, std::bind(&PointCloud2Subscriber::cloud3_callback, this, _1));
+                            10, std::bind(&PointCloud2Subscriber::cloud3_callback, this, _1), options);
         sub4_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/livox/lidar_3WEDJ5H00100311",
-                            10, std::bind(&PointCloud2Subscriber::cloud4_callback, this, _1));
+                            10, std::bind(&PointCloud2Subscriber::cloud4_callback, this, _1), options);
         sub5_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/livox/lidar_3WEDJ5M00101211",
-                            10, std::bind(&PointCloud2Subscriber::cloud5_callback, this, _1));
+                            10, std::bind(&PointCloud2Subscriber::cloud5_callback, this, _1), options);
 
         tfBuffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tfListener = std::make_shared<tf2_ros::TransformListener>(*tfBuffer);
 
         // Store full point cloud id and separate timestamps of each pointcloud for deeper analysis
         cloud_csv.open ("full_clouds.csv");
-        cloud_csv << "full cloud id; time cloud_1; time cloud_2; time cloud_3; time cloud_4; time cloud_5;";
+        cloud_csv << "full cloud id; time cloud_1; time cloud_2; time cloud_3; time cloud_4; time cloud_5;\n";
 
     }
 
@@ -85,7 +86,8 @@ class PointCloud2Subscriber : public rclcpp::Node
         pcl::transformPointCloud(temp_cloud_1, trans_temp_cloud_1, tf2::transformToEigen(transformStamped).matrix(), true);
         
         // add clouds in fifo queue
-        clouds_1.push(std::make_tuple(trans_temp_cloud_1, msg->header.stamp.sec));
+        double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
+        clouds_1.push(std::make_tuple(trans_temp_cloud_1, timestamp));
 
     }
 
@@ -102,7 +104,8 @@ class PointCloud2Subscriber : public rclcpp::Node
         pcl::transformPointCloud(temp_cloud_2, trans_temp_cloud_2, tf2::transformToEigen(transformStamped).matrix(), true);
         
         // add clouds in fifo queue
-        clouds_2.push(std::make_tuple(trans_temp_cloud_2, msg->header.stamp.sec));
+        double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
+        clouds_2.push(std::make_tuple(trans_temp_cloud_2, timestamp));
     }
 
 
@@ -111,14 +114,15 @@ class PointCloud2Subscriber : public rclcpp::Node
         pcl::PointCloud<pcl::PointXYZI> temp_cloud_3, trans_temp_cloud_3;
         pcl::fromROSMsg(*msg, temp_cloud_3);
 
-        transformStamped = tfBuffer->lookupTransform("livox_frame", "LivoxBroadcastCode3WEDJ5H00100311", rclcpp::Time(0));
+        transformStamped = tfBuffer->lookupTransform("livox_frame", "LivoxBroadcastCode3WEDH7600108991", rclcpp::Time(0));
 
         // transform the point cloud into livox_frame
         //tf2::doTransform(temp_cloud_3, trans_temp_cloud_3, transformStamped);
         pcl::transformPointCloud(temp_cloud_3, trans_temp_cloud_3, tf2::transformToEigen(transformStamped).matrix(), true);
         
         // add clouds in fifo queue
-        clouds_3.push(std::make_tuple(trans_temp_cloud_3, msg->header.stamp.sec));
+        double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
+        clouds_3.push(std::make_tuple(trans_temp_cloud_3, timestamp));
     }
 
 
@@ -127,14 +131,15 @@ class PointCloud2Subscriber : public rclcpp::Node
         pcl::PointCloud<pcl::PointXYZI> temp_cloud_4, trans_temp_cloud_4;
         pcl::fromROSMsg(*msg, temp_cloud_4);
 
-        transformStamped = tfBuffer->lookupTransform("livox_frame", "LivoxBroadcastCode3WEDH7600108991", rclcpp::Time(0));
+        transformStamped = tfBuffer->lookupTransform("livox_frame", "LivoxBroadcastCode3WEDJ5H00100311", rclcpp::Time(0));
 
         // transform the point cloud into livox_frame
         //tf2::doTransform(temp_cloud_4, trans_temp_cloud_4, transformStamped);
         pcl::transformPointCloud(temp_cloud_4, trans_temp_cloud_4, tf2::transformToEigen(transformStamped).matrix(), true);
         
         // add clouds in fifo queue
-        clouds_4.push(std::make_tuple(trans_temp_cloud_4, msg->header.stamp.sec));
+        double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
+        clouds_4.push(std::make_tuple(trans_temp_cloud_4, timestamp));
     }
 
 
@@ -150,7 +155,8 @@ class PointCloud2Subscriber : public rclcpp::Node
         pcl::transformPointCloud(temp_cloud_5, trans_temp_cloud_5, tf2::transformToEigen(transformStamped).matrix(), true);
         
         // add clouds in fifo queue
-        clouds_5.push(std::make_tuple(trans_temp_cloud_5, msg->header.stamp.sec));
+        double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
+        clouds_5.push(std::make_tuple(trans_temp_cloud_5, timestamp));
     }
 
 
@@ -169,8 +175,35 @@ class PointCloud2Subscriber : public rclcpp::Node
 
             // store timestamps of clouds
             // CSV - full cloud id; time cloud_1; time cloud_2; time cloud_3; time cloud_4; time cloud_5;
-            cloud_csv << this->stored_full_clouds             << ";" << std::get<1>(clouds_1.front()) << ";" << std::get<1>(clouds_2.front())\
-                      << ";" << std::get<1>(clouds_3.front()) << ";" << std::get<1>(clouds_4.front()) << ";" << std::get<1>(clouds_5.front()) << ";\n";
+            cloud_csv << this->stored_full_clouds << std::setprecision(9) << std::fixed \
+                      << ";" << std::get<1>(clouds_1.front()) \
+                      << ";" << std::get<1>(clouds_2.front()) \
+                      << ";" << std::get<1>(clouds_3.front()) \
+                      << ";" << std::get<1>(clouds_4.front()) \
+                      << ";" << std::get<1>(clouds_5.front()) \
+                      << ";\n";
+
+            // check time difference of the point clouds
+            double diff_12 = std::get<1>(clouds_1.front()) - std::get<1>(clouds_2.front());
+            double diff_13 = std::get<1>(clouds_1.front()) - std::get<1>(clouds_3.front());
+            double diff_14 = std::get<1>(clouds_1.front()) - std::get<1>(clouds_4.front());
+            double diff_15 = std::get<1>(clouds_1.front()) - std::get<1>(clouds_5.front());
+            double diff_23 = std::get<1>(clouds_2.front()) - std::get<1>(clouds_3.front());
+            double diff_24 = std::get<1>(clouds_2.front()) - std::get<1>(clouds_4.front());
+            double diff_25 = std::get<1>(clouds_2.front()) - std::get<1>(clouds_5.front());
+            double diff_34 = std::get<1>(clouds_3.front()) - std::get<1>(clouds_4.front());
+            double diff_35 = std::get<1>(clouds_3.front()) - std::get<1>(clouds_5.front());
+            double diff_45 = std::get<1>(clouds_4.front()) - std::get<1>(clouds_5.front());
+            double threshold = 0.2;
+
+            if (diff_12 >= threshold || diff_13 >= threshold ||diff_14 >= threshold || diff_15 >= threshold\
+               ||diff_23 >= threshold ||diff_24 >= threshold ||diff_25 >= threshold || diff_34 >= threshold\
+               ||diff_35 >= threshold ||diff_45 >= threshold){
+                
+                std::cerr << "timestamp difference greater than 0.2 seconds occured!" << std::endl;
+                rclcpp::shutdown();
+            }
+    
 
             // remove clouds from FIFO Queue
             clouds_1.pop();
@@ -193,12 +226,13 @@ class PointCloud2Subscriber : public rclcpp::Node
             // close file if no pointclouds arrive anymore - threshold 10 seconds
             this->time_since_full_pointcloud = 0;
 
-        } else {    // if no pointcloud arrives after a threshold of 1000 * 10 ms = 10 seconds, the file pointer is closed
+        } else {    // if no pointcloud arrives after a threshold of 5000 * 1 ms = 5 seconds, the file pointer is closed
             this->time_since_full_pointcloud++;
-            if (this->time_since_full_pointcloud >= 1000){
+            if (this->time_since_full_pointcloud >= 5000){
                 cloud_csv.close();
-                std::cout << "no more pointclouds arrived since 10 seconds. Program can be closed with CTRL+C" << std::endl;
+                std::cout << "no more pointclouds arrived since 5 seconds. Node is now shutdown" << std::endl;
                 allow_pointcloud_merge = false;
+                rclcpp::shutdown();
             }
         }
 
@@ -206,13 +240,13 @@ class PointCloud2Subscriber : public rclcpp::Node
 
 
     size_t stored_full_clouds = 0, time_since_full_pointcloud = 0;
-    std::queue<std::tuple<pcl::PointCloud<pcl::PointXYZI>, int32_t>> clouds_1, clouds_2, clouds_3, clouds_4, clouds_5;
+    std::queue<std::tuple<pcl::PointCloud<pcl::PointXYZI>, double>> clouds_1, clouds_2, clouds_3, clouds_4, clouds_5;
     std::unique_ptr<tf2_ros::Buffer> tfBuffer;
     std::shared_ptr<tf2_ros::TransformListener> tfListener{nullptr};
     geometry_msgs::msg::TransformStamped transformStamped;
     rclcpp::CallbackGroup::SharedPtr pointcloud_callback_group;
     rclcpp::SubscriptionOptions options;
-    bool allow_pointcloud_merge = false;
+    bool allow_pointcloud_merge = true;
     std::ofstream cloud_csv;
 
     pcl::PointCloud<pcl::PointXYZI> full_cloud;
