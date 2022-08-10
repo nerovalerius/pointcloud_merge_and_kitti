@@ -1,4 +1,9 @@
 # pointcloud_merge_and_kitti
+
+![full cloud image](https://https://github.com/nerovalerius/pointcloud_merge_and_kitti/blob/main/images/merged_cloud.jpg)
+
+
+
 ROS Package - Merge multiple pointclouds and then store them as KITTI binary files
 For now, this node uses 5 point clouds coming from 5 livox horizon lidars, mounted on a bicycle.
 This node reads each topic, transforms the pointclouds with information out of the ROS2 tf tree and merges them.
