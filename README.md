@@ -1,6 +1,6 @@
 # pointcloud_merge_and_kitti
 
-![full cloud image](https://https://github.com/nerovalerius/pointcloud_merge_and_kitti/blob/main/images/merged_cloud.jpg)
+![full cloud image](https://github.com/nerovalerius/pointcloud_merge_and_kitti/blob/main/images/merged_cloud.jpg)
 
 
 
