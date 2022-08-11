@@ -214,7 +214,7 @@ class PointCloud2Subscriber : public rclcpp::Node
 
             // Save Pointcloud to file
             std::stringstream ss;
-            ss << "./full_cloud_" << this->stored_full_clouds << ".pcd";
+            ss << "./full_cloud_" << std::setw(5) << std::setfill('0') << this->stored_full_clouds << ".pcd";
             std::string full_cloud_name = ss.str();           
             pcl::io::savePCDFileASCII(full_cloud_name, full_cloud);
             

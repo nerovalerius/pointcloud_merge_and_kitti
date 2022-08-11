@@ -21,8 +21,6 @@ find_package(pcl_conversions	REQUIRED)
 find_package(pcl_ros	REQUIRED)
 find_package(tf2_ros	REQUIRED)
 find_package(tf2_eigen	REQUIRED)
-
-
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
