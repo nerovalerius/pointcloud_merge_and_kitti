@@ -2,7 +2,7 @@
 
 ![full cloud image](https://github.com/nerovalerius/pointcloud_merge_and_kitti/blob/main/images/merged_cloud.jpg)
 
-This repository is part of my pipeline to convert the pointcloud data of 5 x Livox Horizon LiDARs into the "semantic KITTI" format.\
+This repository is part of my pipeline to convert the pointcloud data of 5 x Livox Horizon LiDARs into the ```semantic KITTI``` format.\
 See Instructions here: [LINK](https://gist.github.com/nerovalerius/80133f409f9ed0573522432244298195).
 
 ROS Package - Merge multiple pointclouds and then store them as KITTI binary files
