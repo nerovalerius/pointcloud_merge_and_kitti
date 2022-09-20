@@ -31,6 +31,11 @@
 #include <pcl/io/pcd_io.h>
 #include <Eigen/Geometry>
 
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Quaternion.h>
+
+
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 #include <pcl/common/transforms.h>
 
@@ -85,6 +90,29 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_1, trans_temp_cloud_1, transformStamped);
         pcl::transformPointCloud(temp_cloud_1, trans_temp_cloud_1, tf2::transformToEigen(transformStamped).matrix(), true);
         
+        
+        // Transformation Matrix for different steps of alignment
+	Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+        
+        // Degrees
+        int angle = -3;
+        
+        // Rotate  pointcloud by "angle" degrees in Z axis - its not perfectly aligned
+        transform_1(0, 0) = cos(angle * M_PI / 180);
+        transform_1(0, 1) = -sin(angle * M_PI / 180);
+        transform_1(1, 0) = sin(angle * M_PI / 180);
+        transform_1(1, 1) = cos(angle * M_PI / 180);
+        transform_1(2, 2) = 1;
+        transform_1(3, 3) = 1;
+        
+        // shift in axis
+        transform_1(0, 3) = 0;      // x shift
+        transform_1(1, 3) = 0.15;   // y shift
+        transform_1(2, 3) = 0;      // z shift
+        
+        // Rotate fist pointcloud by "angle" degrees in Z axis
+        pcl::transformPointCloud(trans_temp_cloud_1, trans_temp_cloud_1, transform_1, true);
+        
         // add clouds in fifo queue
         double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
         clouds_1.push(std::make_tuple(trans_temp_cloud_1, timestamp));
@@ -103,7 +131,7 @@ class PointCloud2Subscriber : public rclcpp::Node
         //tf2::doTransform(temp_cloud_2, trans_temp_cloud_2, transformStamped);
         pcl::transformPointCloud(temp_cloud_2, trans_temp_cloud_2, tf2::transformToEigen(transformStamped).matrix(), true);
         
-        // add clouds in fifo queue
+                // add clouds in fifo queue
         double timestamp = (double)msg->header.stamp.sec + (double)(msg->header.stamp.nanosec / 1000000000.0f);
         clouds_2.push(std::make_tuple(trans_temp_cloud_2, timestamp));
     }
@@ -201,7 +229,7 @@ class PointCloud2Subscriber : public rclcpp::Node
                ||diff_35 >= threshold ||diff_45 >= threshold){
                 
                 std::cerr << "timestamp difference greater than 0.2 seconds occured!" << std::endl;
-                rclcpp::shutdown();
+
             }
     
 
